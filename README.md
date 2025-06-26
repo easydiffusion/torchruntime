@@ -20,6 +20,16 @@ It deals with the complexity of the variety of torch builds and configurations r
 # Installation
 Supports Windows, Linux, and Mac.
 
+### As a dependency
+
+Add the following definition to your `requirements.txt` or `pyproject.toml` file:
+
+`torchruntime~=[version]`
+
+Replace `[version]` with the desired version of Torchruntime. Using the [compatible release operator](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release) allows for updated device definitions to be made available to users without further changes. You will still need to manually change the version specification when breaking changes are introduced.
+
+### Manually
+
 `pip install torchruntime`
 
 ## Usage

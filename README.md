@@ -20,6 +20,20 @@ It deals with the complexity of the variety of torch builds and configurations r
 # Installation
 Supports Windows, Linux, and Mac.
 
+### As a dependency
+
+Add the following definition to your `requirements.txt` or `pyproject.toml` file:
+
+`torchruntime~=[major-ver].[minor-ver]`
+
+Replace `[major-ver]` and `[minor-ver]` with the desired Torchruntime release series, for example:
+
+`torchruntime~=1.20`
+
+Using the [compatible release operator](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release) allows updated device definitions and non-breaking changes to be made available to users without manual intervention. You will still need to update the definition when breaking changes are introduced in new major versions.
+
+### Manually
+
 `pip install torchruntime`
 
 ## Usage

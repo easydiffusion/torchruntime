@@ -24,9 +24,13 @@ Supports Windows, Linux, and Mac.
 
 Add the following definition to your `requirements.txt` or `pyproject.toml` file:
 
-`torchruntime~=[version]`
+`torchruntime~=[major-ver].[minor-ver]`
 
-Replace `[version]` with the desired version of Torchruntime. Using the [compatible release operator](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release) allows for updated device definitions to be made available to users without further changes. You will still need to manually change the version specification when breaking changes are introduced.
+Replace `[major-ver]` and `[minor-ver]` with the desired Torchruntime release series, for example:
+
+`torchruntime~=1.20`
+
+Using the [compatible release operator](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release) allows updated device definitions and non-breaking changes to be made available to users without manual intervention. You will still need to update the definition when breaking changes are introduced in new major versions.
 
 ### Manually
 

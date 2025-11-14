@@ -23,8 +23,25 @@ res2 = set(cursor2.execute(QUERY).fetchall())
 cols = cursor1.execute(COL_NAME_QUERY).fetchall()
 cols = tuple(col[1] for col in cols)
 
-additions = res2 - res1
-deletions = res1 - res2
+# Create dictionaries keyed by (vendor_id, device_id) for change detection
+dict1 = {(row[0], row[2]): row for row in res1}
+dict2 = {(row[0], row[2]): row for row in res2}
+
+# Find changes where vendor_id and device_id match but other fields differ
+changes_old = []
+changes_new = []
+for key in dict1.keys() & dict2.keys():
+    old_row = dict1[key]
+    new_row = dict2[key]
+    # Check if device_name (index 3) or is_discrete (index 4) changed
+    if old_row[1] != new_row[1] or old_row[3] != new_row[3] or old_row[4] != new_row[4]:
+        changes_old.append(old_row)
+        changes_new.append(new_row)
+
+# Remove changed rows from additions/deletions
+changed_keys = set(zip([row[0] for row in changes_old], [row[2] for row in changes_old]))
+additions = {row for row in res2 - res1 if (row[0], row[2]) not in changed_keys}
+deletions = {row for row in res1 - res2 if (row[0], row[2]) not in changed_keys}
 
 if additions:
     print("### Additions")
@@ -39,5 +56,20 @@ if deletions:
     print("```")
     print(cols)
     for row in deletions:
+        print(row)
+    print("```")
+
+if changes_old:
+    print("### Changes")
+    print("#### Old values:")
+    print("```")
+    print(cols)
+    for row in changes_old:
+        print(row)
+    print("```\n")
+    print("#### Changed values:")
+    print("```")
+    print(cols)
+    for row in changes_new:
         print(row)
     print("```")

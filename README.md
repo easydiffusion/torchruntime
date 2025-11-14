@@ -30,6 +30,8 @@ Supports Windows, Linux, and Mac.
 
 This will install `torch`, `torchvision`, and `torchaudio`, and will decide the variant based on the user's OS, GPU manufacturer and GPU model number. See [customizing packages](#customizing-packages) for more options.
 
+**Tip:** You can also add the `--uv` flag to install packages using [uv](https://docs.astral.sh/uv/) (instead of `pip`). For e.g. `python -m torchruntime install --uv`
+
 ### Step 2. Configure torch
 This should be run inside your program, to initialize the required environment variables (if any) for the variant of torch being used.
 

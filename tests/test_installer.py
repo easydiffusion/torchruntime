@@ -92,6 +92,17 @@ def test_get_pip_commands_valid():
     assert result == expected
 
 
+def test_get_pip_commands_with_uv():
+    cmds = [["package1"], ["package2", "--upgrade"]]
+    expected = [
+        ["uv", "pip", "install", "package1"],
+        ["uv", "pip", "install", "package2", "--upgrade"],
+    ]
+
+    result = get_pip_commands(cmds, use_uv=True)
+    assert result == expected
+
+
 def test_get_pip_commands_none_input():
     cmds = [["package1"], None]
     with pytest.raises(AssertionError):

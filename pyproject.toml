@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "torchruntime"
-version = "1.27.0"
+version = "1.28.0"
 description = "Meant for app developers. A convenient way to install and configure the appropriate version of PyTorch on the user's computer, based on the OS and GPU manufacturer and model number."
 readme = "README.md"
 requires-python = ">=3.0"

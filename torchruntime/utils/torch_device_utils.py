@@ -42,13 +42,15 @@ def get_installed_torch_platform():
     import torch.backends
     from platform import system as os_name
 
-    if _is_directml_platform_available():
-        return DIRECTML, torch.directml
-
     if torch.cuda.is_available():
         return CUDA, torch.cuda
     if hasattr(torch, XPU) and torch.xpu.is_available():
         return XPU, torch.xpu
+
+    # DirectML is a useful fallback on Windows, but users can have torch-directml installed
+    # alongside a working CUDA/ROCm torch build. Prefer the native torch backend when available.
+    if _is_directml_platform_available():
+        return DIRECTML, torch.directml
     if os_name() == "Darwin":
         if hasattr(torch, MPS):
             return MPS, torch.mps

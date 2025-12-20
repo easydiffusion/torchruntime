@@ -1,7 +1,7 @@
 import sys
 import pytest
 from unittest.mock import patch
-from torchruntime.installer import get_install_commands, get_pip_commands, run_commands
+from torchruntime.installer import get_install_commands, get_pip_commands, run_commands, install
 
 
 def test_empty_args():
@@ -125,3 +125,57 @@ def test_run_commands():
         # Check that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(cmds[0])
         mock_run.assert_any_call(cmds[1])
+
+
+def test_install_promotes_cuda_platform_for_torch_27(monkeypatch):
+    captured = {}
+
+    def fake_get_install_commands(torch_platform, packages):
+        captured["platform"] = torch_platform
+        return [packages]
+
+    monkeypatch.setattr("torchruntime.installer.get_gpus", lambda: [])
+    monkeypatch.setattr("torchruntime.installer.get_torch_platform", lambda gpu_infos: "cu124")
+    monkeypatch.setattr("torchruntime.installer.get_install_commands", fake_get_install_commands)
+    monkeypatch.setattr("torchruntime.installer.get_pip_commands", lambda cmds, use_uv=False: cmds)
+    monkeypatch.setattr("torchruntime.installer.run_commands", lambda cmds: None)
+
+    install(["torch==2.7.1"])
+
+    assert captured["platform"] == "cu128"
+
+
+def test_install_demotes_cuda_platform_for_torch_26(monkeypatch):
+    captured = {}
+
+    def fake_get_install_commands(torch_platform, packages):
+        captured["platform"] = torch_platform
+        return [packages]
+
+    monkeypatch.setattr("torchruntime.installer.get_gpus", lambda: [])
+    monkeypatch.setattr("torchruntime.installer.get_torch_platform", lambda gpu_infos: "cu128")
+    monkeypatch.setattr("torchruntime.installer.get_install_commands", fake_get_install_commands)
+    monkeypatch.setattr("torchruntime.installer.get_pip_commands", lambda cmds, use_uv=False: cmds)
+    monkeypatch.setattr("torchruntime.installer.run_commands", lambda cmds: None)
+
+    install(["torch==2.6.0"])
+
+    assert captured["platform"] == "cu124"
+
+
+def test_install_promotes_cuda_platform_for_torchvision_022(monkeypatch):
+    captured = {}
+
+    def fake_get_install_commands(torch_platform, packages):
+        captured["platform"] = torch_platform
+        return [packages]
+
+    monkeypatch.setattr("torchruntime.installer.get_gpus", lambda: [])
+    monkeypatch.setattr("torchruntime.installer.get_torch_platform", lambda gpu_infos: "cu124")
+    monkeypatch.setattr("torchruntime.installer.get_install_commands", fake_get_install_commands)
+    monkeypatch.setattr("torchruntime.installer.get_pip_commands", lambda cmds, use_uv=False: cmds)
+    monkeypatch.setattr("torchruntime.installer.run_commands", lambda cmds: None)
+
+    install(["torchvision==0.22.0"])
+
+    assert captured["platform"] == "cu128"

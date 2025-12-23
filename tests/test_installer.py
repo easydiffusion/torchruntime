@@ -1,7 +1,7 @@
 import sys
 import pytest
 from unittest.mock import patch
-from torchruntime.installer import get_install_commands, get_pip_commands, run_commands
+from torchruntime.installer import get_install_commands, get_pip_commands, run_commands, install
 
 
 def test_empty_args():
@@ -125,3 +125,25 @@ def test_run_commands():
         # Check that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(cmds[0])
         mock_run.assert_any_call(cmds[1])
+
+
+def test_install_demotes_cu128_to_cu124_for_torch_2_6(monkeypatch):
+    # Simulate a system where the detected platform would be cu128.
+    monkeypatch.setattr("torchruntime.installer.get_gpus", lambda: ["dummy_gpu"])
+    monkeypatch.setattr("torchruntime.installer.get_torch_platform", lambda gpu_infos: "cu128")
+
+    seen = {}
+
+    def fake_get_install_commands(torch_platform, packages):
+        seen["torch_platform"] = torch_platform
+        seen["packages"] = packages
+        return [packages]
+
+    monkeypatch.setattr("torchruntime.installer.get_install_commands", fake_get_install_commands)
+    monkeypatch.setattr("torchruntime.installer.get_pip_commands", lambda cmds, use_uv=False: cmds)
+    monkeypatch.setattr("torchruntime.installer.run_commands", lambda cmds: None)
+
+    install(["torch==2.6.0"])
+
+    assert seen["packages"] == ["torch==2.6.0"]
+    assert seen["torch_platform"] == "cu124"

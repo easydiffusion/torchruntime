@@ -1,4 +1,3 @@
-import re
 import sys
 import platform
 
@@ -12,54 +11,11 @@ os_name = platform.system()
 arch = platform.machine().lower()
 py_version = sys.version_info
 
-_CUDA_12_8_PLATFORM = "cu128"
-_CUDA_12_4_PLATFORM = "cu124"
 _CUDA_12_8_MIN_VERSIONS = {
     "torch": Version("2.7.0"),
     "torchaudio": Version("2.7.0"),
     "torchvision": Version("0.22.0"),
 }
-
-
-def _parse_release_segments(text):
-    segments = []
-    for part in text.split("."):
-        match = re.match(r"^(\d+)", part)
-        if not match:
-            break
-        segments.append(int(match.group(1)))
-    return segments
-
-
-def _upper_bound_for_specifier(specifier):
-    operator = specifier.operator
-    version = specifier.version
-
-    if operator == "<":
-        return Version(version), False
-    if operator == "<=":
-        return Version(version), True
-    if operator == "==":
-        if "*" in version:
-            prefix = version.split("*", 1)[0].rstrip(".")
-            prefix_segments = _parse_release_segments(prefix)
-            if not prefix_segments:
-                return None, None
-            prefix_segments[-1] += 1
-            upper = Version(".".join(str(s) for s in prefix_segments))
-            return upper, False
-        return Version(version), True
-    if operator == "~=":
-        release_segments = _parse_release_segments(version)
-        if len(release_segments) < 2:
-            return None, None
-        bump_index = len(release_segments) - 2
-        upper_segments = release_segments[: bump_index + 1]
-        upper_segments[bump_index] += 1
-        upper = Version(".".join(str(s) for s in upper_segments))
-        return upper, False
-
-    return None, None
 
 
 def _packages_require_cuda_12_4(packages):
@@ -77,31 +33,22 @@ def _packages_require_cuda_12_4(packages):
         if not threshold or not requirement.specifier:
             continue
 
-        threshold_allowed = None
-        for specifier in requirement.specifier:
-            upper, inclusive = _upper_bound_for_specifier(specifier)
-            if not upper:
-                continue
+        test_versions = [
+            threshold,
+            Version(f"{threshold.major}.{threshold.minor}.{threshold.micro + 1}"),
+            Version(f"{threshold.major}.{threshold.minor}.{threshold.micro + 2}"),
+            Version(f"{threshold.major}.{threshold.minor}.{threshold.micro + 3}"),
+            Version(f"{threshold.major}.{threshold.minor + 1}.0"),
+            Version(f"{threshold.major + 1}.0.0"),
+        ]
 
-            if upper < threshold:
-                return True
-
-            if upper == threshold and not inclusive:
-                return True
-
-            if upper == threshold and inclusive:
-                if threshold_allowed is None:
-                    threshold_allowed = requirement.specifier.contains(threshold, prereleases=True)
-                if not threshold_allowed:
-                    return True
+        allows_threshold_or_higher = any(
+            requirement.specifier.contains(str(version), prereleases=True) for version in test_versions
+        )
+        if not allows_threshold_or_higher:
+            return True
 
     return False
-
-
-def _adjust_cuda_platform_for_requested_packages(torch_platform, packages):
-    if torch_platform == _CUDA_12_8_PLATFORM and _packages_require_cuda_12_4(packages):
-        return _CUDA_12_4_PLATFORM
-    return torch_platform
 
 
 def get_torch_platform(gpu_infos, packages=[]):
@@ -148,14 +95,12 @@ def get_torch_platform(gpu_infos, packages=[]):
             integrated_devices.append(device)
 
     if discrete_devices:
-        torch_platform = _get_platform_for_discrete(discrete_devices)
-        return _adjust_cuda_platform_for_requested_packages(torch_platform, packages)
+        return _get_platform_for_discrete(discrete_devices, packages=packages)
 
-    torch_platform = _get_platform_for_integrated(integrated_devices)
-    return _adjust_cuda_platform_for_requested_packages(torch_platform, packages)
+    return _get_platform_for_integrated(integrated_devices)
 
 
-def _get_platform_for_discrete(gpu_infos):
+def _get_platform_for_discrete(gpu_infos, packages=None):
     vendor_ids = set(gpu.vendor_id for gpu in gpu_infos)
 
     if len(vendor_ids) > 1:
@@ -221,6 +166,9 @@ def _get_platform_for_discrete(gpu_infos):
             if arch_version == 3.7:
                 return "cu118"
             if (arch_version > 3.7 and arch_version < 7.5) or py_version < (3, 9):
+                return "cu124"
+
+            if _packages_require_cuda_12_4(packages):
                 return "cu124"
 
             return "cu128"

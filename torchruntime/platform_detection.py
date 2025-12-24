@@ -2,6 +2,9 @@ import re
 import sys
 import platform
 
+from packaging.requirements import Requirement
+from packaging.version import Version
+
 from .gpu_db import get_nvidia_arch, get_amd_gfx_info
 from .consts import AMD, INTEL, NVIDIA, CONTACT_LINK
 
@@ -9,13 +12,105 @@ os_name = platform.system()
 arch = platform.machine().lower()
 py_version = sys.version_info
 
+_CUDA_12_8_PLATFORM = "cu128"
+_CUDA_12_4_PLATFORM = "cu124"
+_CUDA_12_8_MIN_VERSIONS = {
+    "torch": Version("2.7.0"),
+    "torchaudio": Version("2.7.0"),
+    "torchvision": Version("0.22.0"),
+}
 
-def get_torch_platform(gpu_infos):
+
+def _parse_release_segments(text):
+    segments = []
+    for part in text.split("."):
+        match = re.match(r"^(\d+)", part)
+        if not match:
+            break
+        segments.append(int(match.group(1)))
+    return segments
+
+
+def _upper_bound_for_specifier(specifier):
+    operator = specifier.operator
+    version = specifier.version
+
+    if operator == "<":
+        return Version(version), False
+    if operator == "<=":
+        return Version(version), True
+    if operator == "==":
+        if "*" in version:
+            prefix = version.split("*", 1)[0].rstrip(".")
+            prefix_segments = _parse_release_segments(prefix)
+            if not prefix_segments:
+                return None, None
+            prefix_segments[-1] += 1
+            upper = Version(".".join(str(s) for s in prefix_segments))
+            return upper, False
+        return Version(version), True
+    if operator == "~=":
+        release_segments = _parse_release_segments(version)
+        if len(release_segments) < 2:
+            return None, None
+        bump_index = len(release_segments) - 2
+        upper_segments = release_segments[: bump_index + 1]
+        upper_segments[bump_index] += 1
+        upper = Version(".".join(str(s) for s in upper_segments))
+        return upper, False
+
+    return None, None
+
+
+def _packages_require_cuda_12_4(packages):
+    if not packages:
+        return False
+
+    for package in packages:
+        try:
+            requirement = Requirement(package)
+        except Exception:
+            continue
+
+        name = requirement.name.lower().replace("_", "-")
+        threshold = _CUDA_12_8_MIN_VERSIONS.get(name)
+        if not threshold or not requirement.specifier:
+            continue
+
+        threshold_allowed = None
+        for specifier in requirement.specifier:
+            upper, inclusive = _upper_bound_for_specifier(specifier)
+            if not upper:
+                continue
+
+            if upper < threshold:
+                return True
+
+            if upper == threshold and not inclusive:
+                return True
+
+            if upper == threshold and inclusive:
+                if threshold_allowed is None:
+                    threshold_allowed = requirement.specifier.contains(threshold, prereleases=True)
+                if not threshold_allowed:
+                    return True
+
+    return False
+
+
+def _adjust_cuda_platform_for_requested_packages(torch_platform, packages):
+    if torch_platform == _CUDA_12_8_PLATFORM and _packages_require_cuda_12_4(packages):
+        return _CUDA_12_4_PLATFORM
+    return torch_platform
+
+
+def get_torch_platform(gpu_infos, packages=[]):
     """
     Determine the appropriate PyTorch platform to use based on the system architecture, OS, and GPU information.
 
     Args:
         gpu_infos (list of `torchruntime.device_db.GPU` instances)
+        packages (list of str): Optional list of torch/torchvision/torchaudio requirement strings.
 
     Returns:
         str: A string representing the platform to use. Possible values:
@@ -53,9 +148,11 @@ def get_torch_platform(gpu_infos):
             integrated_devices.append(device)
 
     if discrete_devices:
-        return _get_platform_for_discrete(discrete_devices)
+        torch_platform = _get_platform_for_discrete(discrete_devices)
+        return _adjust_cuda_platform_for_requested_packages(torch_platform, packages)
 
-    return _get_platform_for_integrated(integrated_devices)
+    torch_platform = _get_platform_for_integrated(integrated_devices)
+    return _adjust_cuda_platform_for_requested_packages(torch_platform, packages)
 
 
 def _get_platform_for_discrete(gpu_infos):

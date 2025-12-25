@@ -121,6 +121,23 @@ def test_nvidia_gpu_linux(monkeypatch):
     assert get_torch_platform(gpu_infos) == expected
 
 
+def test_nvidia_gpu_demotes_to_cu124_for_pinned_torch_below_2_7(monkeypatch):
+    monkeypatch.setattr("torchruntime.platform_detection.os_name", "Windows")
+    monkeypatch.setattr("torchruntime.platform_detection.arch", "amd64")
+    monkeypatch.setattr("torchruntime.platform_detection.py_version", (3, 11))
+    monkeypatch.setattr("torchruntime.platform_detection.get_nvidia_arch", lambda device_names: 8.6)
+
+    gpu_infos = [GPU(NVIDIA, "NVIDIA", 0x1234, "GeForce", True)]
+
+    assert get_torch_platform(gpu_infos) == "cu128"
+    assert get_torch_platform(gpu_infos, packages=["torch==2.6.0"]) == "cu124"
+    assert get_torch_platform(gpu_infos, packages=["torch<2.7.0"]) == "cu124"
+    assert get_torch_platform(gpu_infos, packages=["torch<=2.7.0"]) == "cu128"
+    assert get_torch_platform(gpu_infos, packages=["torch!=2.7.0"]) == "cu128"
+    assert get_torch_platform(gpu_infos, packages=["torch>=2.7.0,!=2.7.0,!=2.7.1,<2.8.0"]) == "cu128"
+    assert get_torch_platform(gpu_infos, packages=["torchvision==0.21.0"]) == "cu124"
+
+
 def test_nvidia_gpu_mac(monkeypatch):
     monkeypatch.setattr("torchruntime.platform_detection.os_name", "Darwin")
     monkeypatch.setattr("torchruntime.platform_detection.arch", "arm64")

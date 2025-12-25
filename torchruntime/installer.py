@@ -98,7 +98,7 @@ def install(packages=[], use_uv=False):
     """
 
     gpu_infos = get_gpus()
-    torch_platform = get_torch_platform(gpu_infos)
+    torch_platform = get_torch_platform(gpu_infos, packages=packages)
     cmds = get_install_commands(torch_platform, packages)
     cmds = get_pip_commands(cmds, use_uv=use_uv)
     run_commands(cmds)

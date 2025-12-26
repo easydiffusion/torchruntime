@@ -13,6 +13,8 @@ Or you can use the library:
 torchruntime.install(["torch", "torchvision<0.20"])
 ```
 
+On Windows CUDA, Linux ROCm (6.x+), and Linux XPU, this also installs the appropriate Triton package to enable `torch.compile` (`triton-windows`, `pytorch-triton-rocm`, or `pytorch-triton-xpu`).
+
 ## Get device info
 You can use the device database built into `torchruntime` for your projects:
 ```py

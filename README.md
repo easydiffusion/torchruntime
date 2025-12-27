@@ -44,7 +44,7 @@ torchruntime.configure()
 ```
 
 ### (Optional) Step 3. Test torch
-Run `python -m torchruntime test` to run a set of tests to check whether the installed version of torch is working correctly.
+Run `python -m torchruntime test` to run a set of tests to check whether the installed version of torch is working correctly (including a `torch.compile` / Triton check on CUDA/XPU systems). You can also run `python -m torchruntime test compile` to run only the compile check.
 
 ## Customizing packages
 By default, `python -m torchruntime install` will install the latest available `torch`, `torchvision` and `torchaudio` suitable on the user's platform.

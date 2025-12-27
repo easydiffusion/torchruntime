@@ -1,6 +1,8 @@
+import importlib.util
+import platform
 import time
 
-from ..torch_device_utils import get_installed_torch_platform, get_device_count, get_device_name, get_device
+from ..torch_device_utils import get_device, get_device_count, get_device_name, get_installed_torch_platform
 
 
 def test(subcommand):
@@ -16,7 +18,7 @@ def test(subcommand):
 
 
 def test_all():
-    for fn in (test_import, test_devices, test_math, test_functions):
+    for fn in (test_import, test_devices, test_compile, test_math, test_functions):
         fn()
         print("")
 
@@ -101,3 +103,74 @@ def test_functions():
         t.run_all_tests()
 
     print("--- / FUNCTIONAL TEST ---")
+
+
+def test_compile():
+    print("--- COMPILE TEST ---")
+
+    try:
+        import torch
+    except ImportError:
+        print("torch.compile: SKIPPED (torch not installed)")
+        print("--- / COMPILE TEST ---")
+        return
+
+    if not hasattr(torch, "compile"):
+        print("torch.compile: SKIPPED (requires torch>=2.0)")
+        print("--- / COMPILE TEST ---")
+        return
+
+    torch_platform_name, _ = get_installed_torch_platform()
+    if torch_platform_name not in ("cuda", "xpu"):
+        print(f"torch.compile: SKIPPED (unsupported backend: {torch_platform_name})")
+        print("--- / COMPILE TEST ---")
+        return
+
+    if importlib.util.find_spec("triton") is None:
+        print("triton: NOT INSTALLED")
+    else:
+        print("triton: installed")
+
+    device = get_device(0)
+    print("On torch device:", device)
+
+    def f(x):
+        return x * 2 + 1
+
+    try:
+        compiled_f = torch.compile(f)
+        x = torch.randn((1024,), device=device)
+        y = compiled_f(x)
+        expected = f(x)
+        if not torch.allclose(y, expected):
+            print("torch.compile: FAILED (output mismatch)")
+        else:
+            if torch_platform_name == "cuda":
+                torch.cuda.synchronize()
+            if torch_platform_name == "xpu" and hasattr(torch, "xpu") and hasattr(torch.xpu, "synchronize"):
+                torch.xpu.synchronize()
+            print("torch.compile: PASSED")
+    except Exception as e:
+        print(f"torch.compile: FAILED ({type(e).__name__}: {e})")
+
+        hint = None
+        os_name = platform.system()
+        if torch_platform_name == "cuda" and os_name == "Windows":
+            hint = "pip install triton-windows  (or: python -m torchruntime install)"
+        elif torch_platform_name == "cuda" and os_name == "Linux":
+            if getattr(torch.version, "hip", None):
+                hint = (
+                    "pip install pytorch-triton-rocm --index-url https://download.pytorch.org/whl  "
+                    "(or: python -m torchruntime install)"
+                )
+        elif torch_platform_name == "xpu" and os_name == "Linux":
+            hint = (
+                "pip install pytorch-triton-xpu --index-url https://download.pytorch.org/whl  "
+                "(or: python -m torchruntime install)"
+            )
+
+        if hint:
+            print("If this failed due to Triton, try:")
+            print("  ", hint)
+
+    print("--- / COMPILE TEST ---")

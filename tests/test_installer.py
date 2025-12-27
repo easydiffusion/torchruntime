@@ -16,18 +16,36 @@ def test_cpu_platform():
     assert result == [packages]
 
 
-def test_cuda_platform():
+def test_cuda_platform(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("cu112", packages)
     expected_url = "https://download.pytorch.org/whl/cu112"
     assert result == [packages + ["--index-url", expected_url]]
 
 
-def test_cuda_nightly_platform():
+def test_cuda_platform_windows_installs_triton(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
+    packages = ["torch", "torchvision"]
+    result = get_install_commands("cu112", packages)
+    expected_url = "https://download.pytorch.org/whl/cu112"
+    assert result == [packages + ["--index-url", expected_url], ["triton-windows"]]
+
+
+def test_cuda_nightly_platform(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("nightly/cu112", packages)
     expected_url = "https://download.pytorch.org/whl/nightly/cu112"
     assert result == [packages + ["--index-url", expected_url]]
+
+
+def test_cuda_nightly_platform_windows_installs_triton(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
+    packages = ["torch", "torchvision"]
+    result = get_install_commands("nightly/cu112", packages)
+    expected_url = "https://download.pytorch.org/whl/nightly/cu112"
+    assert result == [packages + ["--index-url", expected_url], ["triton-windows"]]
 
 
 def test_rocm_platform():
@@ -35,6 +53,18 @@ def test_rocm_platform():
     result = get_install_commands("rocm4.2", packages)
     expected_url = "https://download.pytorch.org/whl/rocm4.2"
     assert result == [packages + ["--index-url", expected_url]]
+
+
+def test_rocm_platform_linux_installs_triton(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
+    packages = ["torch", "torchvision"]
+    result = get_install_commands("rocm6.2", packages)
+    expected_url = "https://download.pytorch.org/whl/rocm6.2"
+    triton_index_url = "https://download.pytorch.org/whl"
+    assert result == [
+        packages + ["--index-url", expected_url],
+        ["pytorch-triton-rocm", "--index-url", triton_index_url],
+    ]
 
 
 def test_xpu_platform_windows_with_torch_only(monkeypatch):
@@ -60,7 +90,11 @@ def test_xpu_platform_linux(monkeypatch):
     packages = ["torch", "torchvision"]
     result = get_install_commands("xpu", packages)
     expected_url = "https://download.pytorch.org/whl/test/xpu"
-    assert result == [packages + ["--index-url", expected_url]]
+    triton_index_url = "https://download.pytorch.org/whl"
+    assert result == [
+        packages + ["--index-url", expected_url],
+        ["pytorch-triton-xpu", "--index-url", triton_index_url],
+    ]
 
 
 def test_directml_platform():

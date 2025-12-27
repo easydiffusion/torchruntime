@@ -12,6 +12,7 @@ os_name = platform.system()
 PIP_PREFIX = [sys.executable, "-m", "pip", "install"]
 CUDA_REGEX = re.compile(r"^(nightly/)?cu\d+$")
 ROCM_REGEX = re.compile(r"^(nightly/)?rocm\d+\.\d+$")
+ROCM_VERSION_REGEX = re.compile(r"^(?:nightly/)?rocm(?P<major>\d+)\.(?P<minor>\d+)$")
 
 
 def get_install_commands(torch_platform, packages):
@@ -43,6 +44,9 @@ def get_install_commands(torch_platform, packages):
         - For "xpu" on Windows, if torchvision or torchaudio are included, the function switches to nightly builds.
         - For "directml", the "torch-directml" package is returned as part of the installation commands.
         - For "ipex", the "intel-extension-for-pytorch" package is returned as part of the installation commands.
+        - For Windows CUDA, the function also installs "triton-windows" (for torch.compile and Triton kernels).
+        - For Linux ROCm 6.x, the function also installs "pytorch-triton-rocm".
+        - For Linux XPU, the function also installs "pytorch-triton-xpu".
     """
     if not packages:
         packages = ["torch", "torchaudio", "torchvision"]
@@ -52,7 +56,17 @@ def get_install_commands(torch_platform, packages):
 
     if CUDA_REGEX.match(torch_platform) or ROCM_REGEX.match(torch_platform):
         index_url = f"https://download.pytorch.org/whl/{torch_platform}"
-        return [packages + ["--index-url", index_url]]
+        cmds = [packages + ["--index-url", index_url]]
+
+        if os_name == "Windows" and CUDA_REGEX.match(torch_platform):
+            cmds.append(["triton-windows"])
+
+        if os_name == "Linux" and ROCM_REGEX.match(torch_platform):
+            match = ROCM_VERSION_REGEX.match(torch_platform)
+            if match and int(match.group("major")) >= 6:
+                cmds.append(["pytorch-triton-rocm", "--index-url", "https://download.pytorch.org/whl"])
+
+        return cmds
 
     if torch_platform == "xpu":
         if os_name == "Windows" and ("torchvision" in packages or "torchaudio" in packages):
@@ -65,7 +79,10 @@ def get_install_commands(torch_platform, packages):
         else:
             index_url = f"https://download.pytorch.org/whl/test/{torch_platform}"
 
-        return [packages + ["--index-url", index_url]]
+        cmds = [packages + ["--index-url", index_url]]
+        if os_name == "Linux":
+            cmds.append(["pytorch-triton-xpu", "--index-url", "https://download.pytorch.org/whl"])
+        return cmds
 
     if torch_platform == "directml":
         return [["torch-directml"], packages]

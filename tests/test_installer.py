@@ -16,7 +16,7 @@ def test_cpu_platform():
     assert result == [packages]
 
 
-def test_cuda_platform(monkeypatch):
+def test_cuda_platform_linux(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("cu112", packages)
@@ -32,7 +32,7 @@ def test_cuda_platform_windows_installs_triton(monkeypatch):
     assert result == [packages + ["--index-url", expected_url], ["triton-windows"]]
 
 
-def test_cuda_nightly_platform(monkeypatch):
+def test_cuda_nightly_platform_linux(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("nightly/cu112", packages)
@@ -48,14 +48,15 @@ def test_cuda_nightly_platform_windows_installs_triton(monkeypatch):
     assert result == [packages + ["--index-url", expected_url], ["triton-windows"]]
 
 
-def test_rocm_platform():
+def test_rocm_4_platform_does_not_install_triton(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("rocm4.2", packages)
     expected_url = "https://download.pytorch.org/whl/rocm4.2"
     assert result == [packages + ["--index-url", expected_url]]
 
 
-def test_rocm_platform_linux_installs_triton(monkeypatch):
+def test_rocm_6_platform_linux_installs_triton(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("rocm6.2", packages)

@@ -67,7 +67,7 @@ So in general, it's better to avoid specifying a version unless it really matter
 - `minor` version change: for non-breaking code changes, e.g. backwards-compatible new functionality, routine maintenance, refactoring. E.g. `1.1` to `1.2`.
 - `patch` version change: for backward compatible bug fixes. E.g. `1.1.1` to `1.1.2`.
 
-It is recommended that you rely on the minor version, for e.g. use `torchruntime ~= 1` in `requirements.txt` (change this to the current major version), which will install versions like `1.21.0`, `1.22.2` etc but not `2.0.0`.
+It is recommended that you rely on the minor version, for e.g. use `torchruntime~=2.0` in `requirements.txt` (change this to the current major version), which will install versions like `2.1.0`, `2.2.2` etc but not `3.0.0`.
 
 # Compatibility table
 The list of platforms on which `torchruntime` can install a working variant of PyTorch.

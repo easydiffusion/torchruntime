@@ -10,7 +10,7 @@ Usage: {entry_command} <command> [arguments]
 
 Commands:
     install             Install PyTorch packages
-    test [subcommand]   Run tests (subcommands: all, devices, math, functions)
+    test [subcommand]   Run tests (subcommands: all, import, devices, compile, math, functions)
     --help             Show this help message
 
 Examples:
@@ -20,10 +20,11 @@ Examples:
     {entry_command} install --uv torch>=2.0.0 torchaudio
     {entry_command} install torch==2.1.* torchvision>=0.16.0 torchaudio==2.1.0
 
-    {entry_command} test          # Runs all tests (import, devices, math, functions)
+    {entry_command} test          # Runs all tests (import, devices, compile, math, functions)
     {entry_command} test all      # Same as above
     {entry_command} test import  # Test only import
     {entry_command} test devices  # Test only devices
+    {entry_command} test compile  # Test torch.compile (Triton)
     {entry_command} test math     # Test only math
     {entry_command} test functions # Test only functions
 

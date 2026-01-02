@@ -1,5 +1,5 @@
 import setuptools
 
 setuptools.setup(
-    install_requires=[],
+    install_requires=["packaging"],
 )

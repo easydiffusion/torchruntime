@@ -30,6 +30,8 @@ Supports Windows, Linux, and Mac.
 
 This will install `torch`, `torchvision`, and `torchaudio`, and will decide the variant based on the user's OS, GPU manufacturer and GPU model number. See [customizing packages](#customizing-packages) for more options.
 
+On Windows CUDA, Linux ROCm (6.x+), and Linux XPU, this also installs the appropriate Triton package to enable `torch.compile` (`triton-windows`, `pytorch-triton-rocm`, or `pytorch-triton-xpu`).
+
 **Tip:** You can also add the `--uv` flag to install packages using [uv](https://docs.astral.sh/uv/) (instead of `pip`). For e.g. `python -m torchruntime install --uv`
 
 ### Step 2. Configure torch
@@ -42,7 +44,7 @@ torchruntime.configure()
 ```
 
 ### (Optional) Step 3. Test torch
-Run `python -m torchruntime test` to run a set of tests to check whether the installed version of torch is working correctly.
+Run `python -m torchruntime test` to run a set of tests to check whether the installed version of torch is working correctly (including a `torch.compile` / Triton check on CUDA/XPU systems). You can also run `python -m torchruntime test compile` to run only the compile check.
 
 ## Customizing packages
 By default, `python -m torchruntime install` will install the latest available `torch`, `torchvision` and `torchaudio` suitable on the user's platform.

@@ -51,13 +51,15 @@ def _packages_require_cuda_12_4(packages):
     return False
 
 
-def get_torch_platform(gpu_infos, packages=[]):
+def get_torch_platform(gpu_infos, packages=[], preview=False, unsupported=True):
     """
     Determine the appropriate PyTorch platform to use based on the system architecture, OS, and GPU information.
 
     Args:
         gpu_infos (list of `torchruntime.device_db.GPU` instances)
         packages (list of str): Optional list of torch/torchvision/torchaudio requirement strings.
+        preview (bool): If True, allow preview/nightly builds (e.g. rocm6.4). Defaults to False.
+        unsupported (bool): If False, forbid EOL/unsupported builds (e.g. cu118). Defaults to True.
 
     Returns:
         str: A string representing the platform to use. Possible values:
@@ -70,6 +72,7 @@ def get_torch_platform(gpu_infos, packages=[]):
 
     Raises:
         NotImplementedError: For unsupported architectures, OS-GPU combinations, or multiple GPU vendors.
+        ValueError: If unsupported=False and only an EOL build is available.
         Warning: Outputs warnings for deprecated Python versions or fallback configurations.
     """
 
@@ -95,12 +98,23 @@ def get_torch_platform(gpu_infos, packages=[]):
             integrated_devices.append(device)
 
     if discrete_devices:
-        return _get_platform_for_discrete(discrete_devices, packages=packages)
+        platform = _get_platform_for_discrete(discrete_devices, packages=packages, preview=preview)
+    else:
+        platform = _get_platform_for_integrated(integrated_devices, preview=preview)
 
-    return _get_platform_for_integrated(integrated_devices)
+    # Segmentation Logic
+    EOL_PLATFORMS = {"cu118", "directml", "ipex", "rocm5.7", "rocm5.5", "rocm5.2", "rocm4.2"}
+
+    if not unsupported and platform in EOL_PLATFORMS:
+        raise ValueError(
+            f"The recommended platform '{platform}' is considered End-of-Life (EOL) and is forbidden because 'unsupported' is set to False. "
+            f"Please use a more recent GPU or set unsupported=True to allow this installation."
+        )
+
+    return platform
 
 
-def _get_platform_for_discrete(gpu_infos, packages=None):
+def _get_platform_for_discrete(gpu_infos, packages=None, preview=False):
     vendor_ids = set(gpu.vendor_id for gpu in gpu_infos)
 
     if len(vendor_ids) > 1:
@@ -124,7 +138,7 @@ def _get_platform_for_discrete(gpu_infos, packages=None):
                     raise NotImplementedError(
                         f"Torch does not support Navi 4x series of GPUs on Python 3.8. Please switch to a newer Python version to use the latest version of torch!"
                     )
-                return "rocm6.4"
+                return "rocm6.4" if preview else "rocm6.2"
             if any(device_name.startswith("Navi") for device_name in device_names) and any(
                 device_name.startswith("Vega 2") for device_name in device_names
             ):  # lowest-common denominator is rocm5.7, which works with both Navi and Vega 20
@@ -201,7 +215,7 @@ def _get_platform_for_discrete(gpu_infos, packages=None):
     return "cpu"
 
 
-def _get_platform_for_integrated(gpu_infos):
+def _get_platform_for_integrated(gpu_infos, preview=False):
     gpu = gpu_infos[0]
 
     if os_name == "Windows":
@@ -235,3 +249,4 @@ def _get_platform_for_integrated(gpu_infos):
         )
 
     return "cpu"
+

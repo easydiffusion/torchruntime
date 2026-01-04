@@ -1,6 +1,6 @@
 import pytest
 from torchruntime.device_db import GPU
-from torchruntime.platform_detection import AMD, INTEL, NVIDIA, get_torch_platform, py_version
+from torchruntime.platform_detection import AMD, INTEL, get_torch_platform, py_version
 
 
 def test_preview_rocm_6_4_selection(monkeypatch):
@@ -11,25 +11,21 @@ def test_preview_rocm_6_4_selection(monkeypatch):
     if py_version < (3, 9):
         pytest.skip("Navi 4 requires Python 3.9+")
 
-    # Default: preview=False -> rocm6.2
-    assert get_torch_platform(gpu_infos) == "rocm6.2"
-    assert get_torch_platform(gpu_infos, preview=False) == "rocm6.2"
+    # Default: preview=False -> cpu
+    assert get_torch_platform(gpu_infos) == "cpu"
+    assert get_torch_platform(gpu_infos, preview=False) == "cpu"
 
     # preview=True -> rocm6.4
     assert get_torch_platform(gpu_infos, preview=True) == "rocm6.4"
 
 
-def test_eol_cu118_selection(monkeypatch):
-    monkeypatch.setattr("torchruntime.platform_detection.os_name", "Windows")
-    monkeypatch.setattr("torchruntime.platform_detection.arch", "amd64")
-    # Kepler architecture (e.g. GTX 780)
-    gpu_infos = [GPU(NVIDIA, "NVIDIA", "1004", "GK110 [GeForce GTX 780]", True)]
+def test_eol_rocm_5_2_selection(monkeypatch):
+    monkeypatch.setattr("torchruntime.platform_detection.os_name", "Linux")
+    monkeypatch.setattr("torchruntime.platform_detection.arch", "x86_64")
+    gpu_infos = [GPU(AMD, "AMD", 0x1234, "Navi 10", True)]
 
-    # Default: unsupported=True -> cu118
-    assert get_torch_platform(gpu_infos) == "cu118"
-    assert get_torch_platform(gpu_infos, unsupported=True) == "cu118"
+    assert get_torch_platform(gpu_infos) == "rocm5.2"
 
-    # unsupported=False -> raises ValueError
     with pytest.raises(ValueError, match="considered End-of-Life"):
         get_torch_platform(gpu_infos, unsupported=False)
 

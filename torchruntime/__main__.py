@@ -38,7 +38,7 @@ of torch, torchaudio and torchvision will be installed.
 Options:
     --uv               Use uv instead of pip for installation
     --preview          Allow preview builds (e.g. ROCm 6.4)
-    --no-unsupported   Forbid EOL/unsupported builds (e.g. CUDA 11.8)
+    --no-unsupported   Forbid EOL/unsupported builds (e.g. DirectML / IPEX / Torch 1.x)
 
 Version specification formats (follows pip format):
     package==2.1.0     Exact version

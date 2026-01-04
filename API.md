@@ -15,7 +15,7 @@ torchruntime.install(["torch", "torchvision<0.20"])
 
 Optional flags:
 - `preview=True` to allow preview builds (e.g. ROCm 6.4, nightly builds, XPU test index)
-- `unsupported=False` to forbid EOL/unsupported builds (errors instead of installing older builds)
+- `unsupported=False` to forbid EOL/unsupported builds (e.g. Torch-DirectML, IPEX, Torch 1.x)
 
 On Windows CUDA, Linux ROCm (6.x+), and Linux XPU, this also installs the appropriate Triton package to enable `torch.compile` (`triton-windows`, `pytorch-triton-rocm`, or `pytorch-triton-xpu`).
 

@@ -8,6 +8,8 @@ import torchruntime
 You can use the command line:
 `python -m torchruntime install <optional list of package names and versions>`
 
+CLI flags: `--policy <compat|stable|preview>`, `--preview`, `--no-unsupported`, `--uv`
+
 Or you can use the library:
 ```py
 torchruntime.install(["torch", "torchvision<0.20"])

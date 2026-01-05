@@ -1,6 +1,7 @@
 from .installer import install
 from .utils.torch_test import test
 from .utils import info
+from .utils.args import parse_policy_args
 
 
 def print_usage(entry_command: str):
@@ -18,6 +19,7 @@ Examples:
     {entry_command} install --uv
     {entry_command} install --preview
     {entry_command} install --no-unsupported
+    {entry_command} install --policy stable
     {entry_command} install torch==2.2.0 torchvision==0.17.0
     {entry_command} install --uv torch>=2.0.0 torchaudio
     {entry_command} install torch==2.1.* torchvision>=0.16.0 torchaudio==2.1.0
@@ -39,6 +41,7 @@ Options:
     --uv               Use uv instead of pip for installation
     --preview          Allow preview builds (e.g. ROCm 6.4)
     --no-unsupported   Forbid EOL/unsupported builds (e.g. DirectML / IPEX / Torch 1.x)
+    --policy <name>    Set configuration policy (stable, compat, preview|nightly). Default: compat
 
 Version specification formats (follows pip format):
     package==2.1.0     Exact version
@@ -66,19 +69,26 @@ def main():
 
     if command == "install":
         args = sys.argv[2:] if len(sys.argv) > 2 else []
-        use_uv = "--uv" in args
-        preview = "--preview" in args
-        unsupported = "--no-unsupported" not in args
-        # Remove flags from args to get package list
-        package_versions = [arg for arg in args if arg not in ("--uv", "--preview", "--no-unsupported")] if args else None
+        try:
+            preview, unsupported, cleaned_args = parse_policy_args(args)
+        except ValueError as e:
+            print(f"Error: {e}")
+            return
+
+        use_uv = "--uv" in cleaned_args
+        # Remove --uv from package list
+        package_versions = [arg for arg in cleaned_args if arg != "--uv"]
         install(package_versions, use_uv=use_uv, preview=preview, unsupported=unsupported)
     elif command == "test":
         subcommand = sys.argv[2] if len(sys.argv) > 2 else "all"
         test(subcommand)
     elif command == "info":
         args = sys.argv[2:] if len(sys.argv) > 2 else []
-        preview = "--preview" in args
-        unsupported = "--no-unsupported" not in args
+        try:
+            preview, unsupported, _ = parse_policy_args(args)
+        except ValueError as e:
+            print(f"Error: {e}")
+            return
         from .utils import info
         info(preview=preview, unsupported=unsupported)
     else:

@@ -34,6 +34,10 @@ On Windows CUDA, Linux ROCm (6.x+), and Linux XPU, this also installs the approp
 
 **Tip:** You can also add the `--uv` flag to install packages using [uv](https://docs.astral.sh/uv/) (instead of `pip`). For e.g. `python -m torchruntime install --uv`
 
+Build-selection options:
+- `--policy <name>`: `compat` (default), `stable`, `preview` (or `nightly`)
+- Overrides: `--preview`, `--no-unsupported`
+
 ### Step 2. Configure torch
 This should be run inside your program, to initialize the required environment variables (if any) for the variant of torch being used.
 

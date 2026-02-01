@@ -2,20 +2,17 @@ import re
 import sys
 import platform
 import subprocess
-
-from .consts import CONTACT_LINK
 from .device_db import get_gpus
 from .platform_detection import get_torch_platform
 
 os_name = platform.system()
 
-PIP_PREFIX = [sys.executable, "-m", "pip", "install"]
 CUDA_REGEX = re.compile(r"^(nightly/)?cu\d+$")
 ROCM_REGEX = re.compile(r"^(nightly/)?rocm\d+\.\d+$")
 ROCM_VERSION_REGEX = re.compile(r"^(?:nightly/)?rocm(?P<major>\d+)\.(?P<minor>\d+)$")
 
 
-def get_install_commands(torch_platform, packages):
+def get_install_commands(torch_platform, packages, preview=False):
     """
     Generates pip installation commands for PyTorch and related packages based on the specified platform.
 
@@ -30,6 +27,7 @@ def get_install_commands(torch_platform, packages):
         packages (list of str): List of package names (and optionally versions in pip format). Examples:
             - ["torch", "torchvision"]
             - ["torch>=2.0", "torchaudio==0.16.0"]
+        preview (bool): If True, allow preview/nightly builds. Defaults to False.
 
     Returns:
         list of list of str: Each sublist contains a pip install command (excluding the `pip install` prefix).
@@ -41,7 +39,7 @@ def get_install_commands(torch_platform, packages):
         ValueError: If an unsupported platform is provided.
 
     Notes:
-        - For "xpu" on Windows, if torchvision or torchaudio are included, the function switches to nightly builds.
+        - For "xpu", if preview is True, the function installs from the test index.
         - For "directml", the "torch-directml" package is returned as part of the installation commands.
         - For "ipex", the "intel-extension-for-pytorch" package is returned as part of the installation commands.
         - For Windows CUDA, the function also installs "triton-windows" (for torch.compile and Triton kernels).
@@ -53,6 +51,9 @@ def get_install_commands(torch_platform, packages):
 
     if torch_platform == "cpu":
         return [packages]
+
+    if torch_platform.startswith("nightly/") and not preview:
+        raise ValueError("preview=True is required for nightly builds")
 
     if CUDA_REGEX.match(torch_platform) or ROCM_REGEX.match(torch_platform):
         index_url = f"https://download.pytorch.org/whl/{torch_platform}"
@@ -69,15 +70,11 @@ def get_install_commands(torch_platform, packages):
         return cmds
 
     if torch_platform == "xpu":
-        if os_name == "Windows" and ("torchvision" in packages or "torchaudio" in packages):
-            print(
-                f"[WARNING] The preview build of 'xpu' on Windows currently only supports torch, not torchvision/torchaudio. "
-                f"torchruntime will instead use the nightly build, to get the 'xpu' version of torchaudio and torchvision as well. "
-                f"Please contact torchruntime if this is no longer accurate: {CONTACT_LINK}"
-            )
-            index_url = f"https://download.pytorch.org/whl/nightly/{torch_platform}"
-        else:
-            index_url = f"https://download.pytorch.org/whl/test/{torch_platform}"
+        index_url = (
+            f"https://download.pytorch.org/whl/test/{torch_platform}"
+            if preview
+            else f"https://download.pytorch.org/whl/{torch_platform}"
+        )
 
         cmds = [packages + ["--index-url", index_url]]
         if os_name == "Linux":
@@ -108,14 +105,16 @@ def run_commands(cmds):
         subprocess.run(cmd)
 
 
-def install(packages=[], use_uv=False):
+def install(packages=[], use_uv=False, preview=False, unsupported=True):
     """
     packages: a list of strings with package names (and optionally their versions in pip-format). e.g. ["torch", "torchvision"] or ["torch>=2.0", "torchaudio==0.16.0"]. Defaults to ["torch", "torchvision", "torchaudio"].
     use_uv: bool, whether to use uv for installation. Defaults to False.
+    preview: bool, whether to allow preview/nightly builds. Defaults to False.
+    unsupported: bool, whether to allow EOL/unsupported builds. Defaults to True.
     """
 
     gpu_infos = get_gpus()
-    torch_platform = get_torch_platform(gpu_infos, packages=packages)
-    cmds = get_install_commands(torch_platform, packages)
+    torch_platform = get_torch_platform(gpu_infos, packages=packages, preview=preview, unsupported=unsupported)
+    cmds = get_install_commands(torch_platform, packages, preview=preview)
     cmds = get_pip_commands(cmds, use_uv=use_uv)
     run_commands(cmds)

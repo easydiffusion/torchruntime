@@ -35,7 +35,7 @@ def test_cuda_platform_windows_installs_triton(monkeypatch):
 def test_cuda_nightly_platform_linux(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
-    result = get_install_commands("nightly/cu112", packages)
+    result = get_install_commands("nightly/cu112", packages, preview=True)
     expected_url = "https://download.pytorch.org/whl/nightly/cu112"
     assert result == [packages + ["--index-url", expected_url]]
 
@@ -43,9 +43,16 @@ def test_cuda_nightly_platform_linux(monkeypatch):
 def test_cuda_nightly_platform_windows_installs_triton(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
     packages = ["torch", "torchvision"]
-    result = get_install_commands("nightly/cu112", packages)
+    result = get_install_commands("nightly/cu112", packages, preview=True)
     expected_url = "https://download.pytorch.org/whl/nightly/cu112"
     assert result == [packages + ["--index-url", expected_url], ["triton-windows"]]
+
+
+def test_cuda_nightly_platform_requires_preview(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
+    packages = ["torch", "torchvision"]
+    with pytest.raises(ValueError, match="preview"):
+        get_install_commands("nightly/cu112", packages, preview=False)
 
 
 def test_rocm_4_platform_does_not_install_triton(monkeypatch):
@@ -71,25 +78,43 @@ def test_rocm_6_platform_linux_installs_triton(monkeypatch):
 def test_xpu_platform_windows_with_torch_only(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
     packages = ["torch"]
-    result = get_install_commands("xpu", packages)
-    expected_url = "https://download.pytorch.org/whl/test/xpu"
+    result = get_install_commands("xpu", packages, preview=False)
+    expected_url = "https://download.pytorch.org/whl/xpu"
     assert result == [packages + ["--index-url", expected_url]]
 
 
-def test_xpu_platform_windows_with_torchvision(monkeypatch, capsys):
+def test_xpu_platform_windows_with_torchvision(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
     packages = ["torch", "torchvision"]
-    result = get_install_commands("xpu", packages)
-    expected_url = "https://download.pytorch.org/whl/nightly/xpu"
+    result = get_install_commands("xpu", packages, preview=False)
+    expected_url = "https://download.pytorch.org/whl/xpu"
     assert result == [packages + ["--index-url", expected_url]]
-    captured = capsys.readouterr()
-    assert "[WARNING]" in captured.out
+
+
+def test_xpu_platform_windows_preview(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
+    packages = ["torch", "torchvision"]
+    result = get_install_commands("xpu", packages, preview=True)
+    expected_url = "https://download.pytorch.org/whl/test/xpu"
+    assert result == [packages + ["--index-url", expected_url]]
 
 
 def test_xpu_platform_linux(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
-    result = get_install_commands("xpu", packages)
+    result = get_install_commands("xpu", packages, preview=False)
+    expected_url = "https://download.pytorch.org/whl/xpu"
+    triton_index_url = "https://download.pytorch.org/whl"
+    assert result == [
+        packages + ["--index-url", expected_url],
+        ["pytorch-triton-xpu", "--index-url", triton_index_url],
+    ]
+
+
+def test_xpu_platform_linux_preview(monkeypatch):
+    monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
+    packages = ["torch", "torchvision"]
+    result = get_install_commands("xpu", packages, preview=True)
     expected_url = "https://download.pytorch.org/whl/test/xpu"
     triton_index_url = "https://download.pytorch.org/whl"
     assert result == [

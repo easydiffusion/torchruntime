@@ -7,7 +7,7 @@ from .torch_device_utils import (
 )
 
 
-def info():
+def info(preview=False, unsupported=True):
     from torchruntime.device_db import get_gpus
     from torchruntime.platform_detection import get_torch_platform
     from torchruntime.configuration import configure
@@ -23,7 +23,7 @@ def info():
     print("")
 
     print("--- RECOMMENDED TORCH PLATFORM ---")
-    torch_platform = get_torch_platform(gpu_infos)
+    torch_platform = get_torch_platform(gpu_infos, preview=preview, unsupported=unsupported)
     print(torch_platform)
 
     print("")

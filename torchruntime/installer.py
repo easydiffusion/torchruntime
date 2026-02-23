@@ -41,7 +41,6 @@ def get_install_commands(torch_platform, packages):
         ValueError: If an unsupported platform is provided.
 
     Notes:
-        - For "xpu" on Windows, if torchvision or torchaudio are included, the function switches to nightly builds.
         - For "directml", the "torch-directml" package is returned as part of the installation commands.
         - For "ipex", the "intel-extension-for-pytorch" package is returned as part of the installation commands.
         - For Windows CUDA, the function also installs "triton-windows" (for torch.compile and Triton kernels).
@@ -69,15 +68,7 @@ def get_install_commands(torch_platform, packages):
         return cmds
 
     if torch_platform == "xpu":
-        if os_name == "Windows" and ("torchvision" in packages or "torchaudio" in packages):
-            print(
-                f"[WARNING] The preview build of 'xpu' on Windows currently only supports torch, not torchvision/torchaudio. "
-                f"torchruntime will instead use the nightly build, to get the 'xpu' version of torchaudio and torchvision as well. "
-                f"Please contact torchruntime if this is no longer accurate: {CONTACT_LINK}"
-            )
-            index_url = f"https://download.pytorch.org/whl/nightly/{torch_platform}"
-        else:
-            index_url = f"https://download.pytorch.org/whl/test/{torch_platform}"
+        index_url = f"https://download.pytorch.org/whl/{torch_platform}"
 
         cmds = [packages + ["--index-url", index_url]]
         if os_name == "Linux":

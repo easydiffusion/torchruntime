@@ -72,25 +72,23 @@ def test_xpu_platform_windows_with_torch_only(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
     packages = ["torch"]
     result = get_install_commands("xpu", packages)
-    expected_url = "https://download.pytorch.org/whl/test/xpu"
+    expected_url = "https://download.pytorch.org/whl/xpu"
     assert result == [packages + ["--index-url", expected_url]]
 
 
-def test_xpu_platform_windows_with_torchvision(monkeypatch, capsys):
+def test_xpu_platform_windows_with_torchvision(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Windows")
     packages = ["torch", "torchvision"]
     result = get_install_commands("xpu", packages)
-    expected_url = "https://download.pytorch.org/whl/nightly/xpu"
+    expected_url = "https://download.pytorch.org/whl/xpu"
     assert result == [packages + ["--index-url", expected_url]]
-    captured = capsys.readouterr()
-    assert "[WARNING]" in captured.out
 
 
 def test_xpu_platform_linux(monkeypatch):
     monkeypatch.setattr("torchruntime.installer.os_name", "Linux")
     packages = ["torch", "torchvision"]
     result = get_install_commands("xpu", packages)
-    expected_url = "https://download.pytorch.org/whl/test/xpu"
+    expected_url = "https://download.pytorch.org/whl/xpu"
     triton_index_url = "https://download.pytorch.org/whl"
     assert result == [
         packages + ["--index-url", expected_url],

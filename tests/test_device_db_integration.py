@@ -48,7 +48,7 @@ def test_get_amd_integrated_devices():
     result = get_device_infos(input_ids)
     assert len(result) == 2
     assert GPU("1002", "Advanced Micro Devices, Inc. [AMD/ATI]", "164c", "Lucienne", False) in result
-    assert GPU("1002", "Advanced Micro Devices, Inc. [AMD/ATI]", "15bf", "Phoenix1", False) in result
+    assert GPU("1002", "Advanced Micro Devices, Inc. [AMD/ATI]", "15bf", "Phoenix1 [Radeon 740M / 760M / 780M Graphics]", False) in result
 
 
 def test_get_intel_integrated_devices():
